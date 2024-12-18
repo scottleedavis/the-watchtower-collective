@@ -90,56 +90,6 @@ The following security agents are included:
     This command runs `app.py` in the left pane and three `agent.py` in the other panes.
 2. **Start the Stream:** Start streaming in Zoom. The agents will connect to the stream, and provide their analysis.
 
-## Example Output
-content_copy
-Use code with caution.
-Markdown
-
---- Starting Video Analysis ---
-
---- Agent: SecOps Report ---
-Personality: Vigilant, focused on threats and vulnerabilities, detail-oriented, slightly cynical.
-Focus: Identifies potential security breaches, unusual activity patterns, and deviations from established policies.
-Frame: Frame 2: One person wearing a mask.
-Analysis: The person wearing a mask is suspicious and could be a security threat.
-Frame: Frame 3: A door is opened forcefully.
-Analysis: The forced opening of the door is a potential breach.
-Frame: Frame 4: A person is running.
-Analysis: The person running could be attempting to flee a crime.
-
---- Agent: DevOps Report ---
-Personality: Practical, proactive, solution-oriented, loves automation, and impatient with slow processes.
-Focus: Looks for operational issues, performance bottlenecks, and potential system instabilities.
-Frame: Frame 3: A door is opened forcefully.
-Analysis: The forced opening of the door may indicate a system or security problem.
-Frame: Frame 6: A server rack is shown.
-Analysis: The server rack's presence could indicate a potential area of operational concern.
-
---- Agent: CloudSec Report ---
-Personality: Observant, data-driven, likes patterns, focused on compliance.
-Focus: Evaluates cloud resource usage, looks for compliance violations, and identifies anomalies within cloud services.
-Frame: Frame 4: A person is running.
-Analysis: The person running could be an anomaly, which could indicate a cloud service issue.
-
---- Agent: AISec Report ---
-Personality: Curious, analytical, looks for trends, and hyperfocuses on things.
-Focus: Monitors user behavior patterns, identifies anomalies in model usage, and detects potential adversarial attacks on AI systems.
-Frame: Frame 7: A person is typing on a keyboard very fast.
-Analysis: The fast typing could be indicative of some sort of threat.
-Frame: Frame 10: A user is training an AI model.
-Analysis: A user is training an AI model, that is something to be monitored.
-Frame: Frame 11: An AI model is misidentifying people
-Analysis: The AI model is having trouble and needs to be looked at.
-
---- Agent: Architect Report ---
-Personality: Strategic, visionary, decisive, no-nonsense, frustrated with repetitive mistakes.
-Focus: Identifies systemic weaknesses, enforces best practices, designs resilient systems, and pushes for architectural changes to prevent future incidents.
-Frame: Frame 8: An old Windows screen with AD login prompt is shown.
-Analysis: The AD login prompt is a major problem.
-Frame: Frame 9: A new modern SAML login page is shown
-Analysis: The new SAML login is good, and should be deployed.
-
---- Video Analysis Completed ---
 
 ## Contributing
 
