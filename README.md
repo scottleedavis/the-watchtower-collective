@@ -1,4 +1,5 @@
 # The Watchtower Collective
+WORK IN PROGRESS
 
 This project demonstrates a multi-agent security system where specialized AI-powered agents collaborate to analyze a shared video stream, providing a comprehensive view of potential threats. This system leverages a Zoom live stream, processed by a Python server, and analyzed by individual agents using the Google Gemini API.
 

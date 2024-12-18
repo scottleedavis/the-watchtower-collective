@@ -1,0 +1,10 @@
+aiortc
+flask
+flask-socketio
+ffmpeg-python
+transformers
+accelerate
+torch
+opencv-python
+google-generativeai
+pillow
