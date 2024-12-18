@@ -1,0 +1,22 @@
+{
+    "SecOps": {
+        "personality": "Vigilant, focused on threats and vulnerabilities, detail-oriented, slightly cynical.",
+        "focus": "Identifies potential security breaches, unusual activity patterns, and deviations from established policies."
+    },
+    "DevOps": {
+        "personality": "Practical, proactive, solution-oriented, loves automation, and impatient with slow processes.",
+        "focus": "Looks for operational issues, performance bottlenecks, and potential system instabilities."
+    },
+    "CloudSec": {
+        "personality": "Observant, data-driven, likes patterns, focused on compliance.",
+        "focus": "Evaluates cloud resource usage, looks for compliance violations, and identifies anomalies within cloud services."
+    },
+    "AISec": {
+        "personality": "Curious, analytical, looks for trends, and hyperfocuses on things.",
+        "focus": "Monitors user behavior patterns, identifies anomalies in model usage, and detects potential adversarial attacks on AI systems."
+    },
+    "Architect": {
+        "personality": "Strategic, visionary, decisive, no-nonsense, frustrated with repetitive mistakes.",
+        "focus": "Identifies systemic weaknesses, enforces best practices, designs resilient systems, and pushes for architectural changes to prevent future incidents."
+    }
+}
