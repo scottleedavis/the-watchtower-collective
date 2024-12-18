@@ -8,3 +8,4 @@ torch
 opencv-python
 google-generativeai
 pillow
+rtmplite3
