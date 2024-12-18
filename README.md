@@ -112,23 +112,5 @@ This project is licensed under Apache 2.0  - see the [LICENSE](LICENSE) file for
 *   This project was inspired by real-world security challenges, expressed by Eric M. https://www.linkedin.com/in/59852820r9f/
 
 Code is meant for demonstration purposes only. Not for production use.
-content_copy
+
 Use code with caution.
-
-Key Improvements:
-
-Clearer Structure: More organized sections with logical flow.
-
-Accurate Details: Includes details about RTMP, Zoom, and the use of ffmpeg and WebRTC.
-
-Step-by-Step Instructions: Detailed steps to get the system up and running.
-
-Corrected Example: The example output now matches the current configuration and use of the Gemini API.
-
-Complete Usage Guide: Includes how to use the start_watchtower.sh script.
-
-Updated Prerequisites: Corrected the list of requirements to include Zoom and FFMPEG.
-
-Future Enhancements: Included ideas to extend the project.
-
-This README should now be a much better starting point for anyone wanting to understand or contribute to your project. Let me know if you have any further adjustments you'd like to make.
