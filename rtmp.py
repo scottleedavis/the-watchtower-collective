@@ -494,7 +494,7 @@ class RTMPServer:
             self.logger.info("Codec Name: %s", client_state.videoCodecName)
 
         # print("VIDEO payload: ")#,payload)
-        self.video_callback(payload)
+        self.video_callback(client_state,payload)
         
     async def handle_audio_data(self, client_id, rtmp_packet):
         client_state = self.client_states[client_id]

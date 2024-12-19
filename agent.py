@@ -1,226 +1,177 @@
 import asyncio
 import json
-from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate, MediaStreamTrack
-from aiortc.contrib.media import MediaStreamTrack
-import socketio
 import logging
 import os
 import ffmpeg
-from PIL import Image
-from io import BytesIO
-from transformers import pipeline
 import torch
+from io import BytesIO
+from PIL import Image
 from collections import defaultdict
-import cv2
+from transformers import pipeline
+from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
+from aiortc.contrib.media import MediaStreamTrack
 import google.generativeai as genai
+import cv2
 import argparse
 
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("agent")
 
-# Set the API key as an environment variable
+# Load environment variables
 gemini_api_key = os.environ.get("GOOGLE_API_KEY")
 if not gemini_api_key:
     raise ValueError("GOOGLE_API_KEY environment variable not set")
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("agent")
-
-# Set the namespace
-namespace = "/agent"
-
-# Setup our connection
-sio = socketio.AsyncClient(logger=True, engineio_logger=True)
-
-# Keep track of the connections
-pcs = defaultdict(list)
-
-async def broadcast(room, event, data):
-    for sid in pcs[room]:
-        await sio.emit(event, data, to=sid)
-
-
-#Setup the image captioning models:
+# Setup image captioning model
 device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Using device {device}")
-image_to_text = pipeline("image-to-text",model="Salesforce/blip-image-captioning-base", device=device)
-
+logger.info(f"Using device {device}")
+image_to_text = pipeline("image-to-text", model="Salesforce/blip-image-captioning-base", device=0 if device == "cuda" else -1)
 
 # Initialize the Gemini model
 genai.configure(api_key=gemini_api_key)
 gemini_model = genai.GenerativeModel('gemini-pro-vision')
 
-# Model setup for the LLM.
-async def get_response_from_gemini(prompt, image_bytes):
-    try:
-        image_part = {"mime_type": "image/jpeg", "data": image_bytes}
-        response = await gemini_model.generate_content([prompt, image_part])
-
-        if response and response.text:
-             return response.text
-        else:
-            return "Gemini API returned an empty response."
-    except Exception as e:
-        print(f"Error using Gemini: {e}")
-        return "Error processing with Gemini API."
-
-
-# Load agent personalities from the JSON file
 def load_agent_personalities():
     try:
         with open("agent_personalities.json", "r") as f:
             return json.load(f)
     except FileNotFoundError:
-        print("Error: agent_personalities.json not found.")
+        logger.error("agent_personalities.json not found.")
         exit(1)
     except json.JSONDecodeError:
-        print("Error: Invalid JSON format in agent_personalities.json.")
+        logger.error("Invalid JSON in agent_personalities.json.")
         exit(1)
 
 agent_personalities = load_agent_personalities()
 
-# Model setup for the LLM.
 async def get_response_from_gemini(prompt, image_bytes):
     try:
         image_part = {"mime_type": "image/jpeg", "data": image_bytes}
         response = await gemini_model.generate_content([prompt, image_part])
 
         if response and response.text:
-             return response.text
+            return response.text
         else:
             return "Gemini API returned an empty response."
     except Exception as e:
-        print(f"Error using Gemini: {e}")
+        logger.error(f"Error using Gemini: {e}")
         return "Error processing with Gemini API."
 
-async def process_video_frame(frame, track, agent_type):
+async def process_video_frame(frame, width, height, agent_type):
     try:
-        # 1. Decode
-        # print("Processing Frame")
+        # Convert raw frame to JPEG
         process = (
             ffmpeg
-            .input('pipe:', format='rawvideo', pix_fmt='rgb24', s=f'{track.width}x{track.height}')
+            .input('pipe:', format='rawvideo', pix_fmt='rgb24', s=f'{width}x{height}')
             .output('pipe:', format='image2', vframes=1, vcodec='mjpeg')
-            .run_async(pipe_stdin=True, pipe_stdout=True)
+            .run_async(pipe_stdin=True, pipe_stdout=True, pipe_stderr=True)
         )
         out, err = await process.communicate(input=frame)
 
-        # 2. Image Processing
+        # Process the image
         image = Image.open(BytesIO(out))
-        
-        # 3. Image analysis via captioning,
         caption = image_to_text(image)[0]['generated_text']
-        print(f"Generated Caption: {caption}")
-        
-        #Convert the image to bytes for Gemini
+        logger.info(f"Generated Caption: {caption}")
+
+        # Convert image to bytes for Gemini
         image_bytes = BytesIO()
         image.save(image_bytes, format='JPEG')
         image_bytes = image_bytes.getvalue()
 
-        # 4. Send to LLM, and then broadcast the result
-        prompt = f"You are an observer for a live video feed. Describe what is happening. Context is provided in the generated caption. Caption: {caption}."
+        # LLM call
+        prompt = f"You are an observer for a live video feed. Describe what is happening. Context is in the caption: {caption}."
         response = await get_response_from_gemini(prompt, image_bytes)
-        print(f"LLM Response: {response}")
-        
-        #Broadcast results with the correct metadata for the agent type.
+        logger.info(f"LLM Response: {response}")
+
+        # Agent formatting
         agent_data = agent_personalities.get(agent_type)
         if agent_data:
            message = f"--- Agent: {agent_type} Report ---\nPersonality: {agent_data['personality']}\nFocus: {agent_data['focus']}\nAnalysis: {response}\n"
-           await broadcast("main", 'message', {'message':message, 'sender':agent_type})
+           logger.info(message)
         else:
-           await broadcast("main", 'message', {'message':response, 'sender':track.id})
+           logger.info(response)
 
     except Exception as e:
-       print(f"Error Processing Frame: {e}")
+       logger.error(f"Error Processing Frame: {e}")
 
+class VideoTransformTrack(MediaStreamTrack):
+    kind = "video"
 
-@sio.on('connect', namespace=namespace)
-async def connect():
-    logger.info('Connected to server')
+    def __init__(self, track, agent_type):
+        super().__init__()
+        self.track = track
+        self.agent_type = agent_type
 
-@sio.on('disconnect', namespace=namespace)
-async def disconnect():
-    logger.info('Disconnected from server')
-    for room in list(pcs):
-      if sio.sid in pcs[room]:
-        pcs[room].remove(sio.sid)
+    async def recv(self):
+        frame = await self.track.recv()
+        img = frame.to_rgb()
+        width, height = img.width, img.height
+        frame_bytes = img.to_ndarray(format="rgb24")
 
-@sio.on('track', namespace=namespace)
-async def handle_track(data):
-    room = "main"
-    track_id = data["label"]
-    print("Got track!", data)
+        # Process frame asynchronously
+        asyncio.create_task(process_video_frame(frame_bytes, width, height, self.agent_type))
+        return frame
+
+# Global variables to track PeerConnection and agent_type
+active_pc = None
+agent_type = None
+
+async def handle_webrtc_offer(offer_sdp, offer_type="offer", ice_candidates=None):
+    """
+    Handle a WebRTC offer, create a PeerConnection, process tracks, and return SDP answer.
+    """
+    global active_pc, agent_type
+    ice_candidates = ice_candidates or []
 
     pc = RTCPeerConnection()
-    pcs[room].append(pc)
-
-    @pc.on("icecandidate")
-    async def on_icecandidate(candidate):
-       if candidate:
-           await sio.emit("ice-candidate", candidate.to_json(), to=sio.sid, namespace=namespace)
+    active_pc = pc
 
     @pc.on("track")
-    async def on_track(track):
-       print("Got track in peer connection!", track)
-       if track.kind == 'video':
-            @track.on("frame")
-            async def on_frame(frame):
-              await process_video_frame(frame, track, args.agent_type)
+    def on_track(track):
+        logger.info(f"Received track: {track.kind}")
+        if track.kind == 'video':
+            local_track = VideoTransformTrack(track, agent_type)
+            pc.addTrack(local_track)
+        else:
+            logger.info(f"Received non-video track: {track.kind}")
 
-    await pc.addTransceiver(kind=data['kind'], direction='recvonly')
+    # Set remote description from offer
+    await pc.setRemoteDescription(RTCSessionDescription(sdp=offer_sdp, type=offer_type))
 
-    offer = await pc.createOffer()
-    await pc.setLocalDescription(offer)
+    # Add ICE candidates
+    for c in ice_candidates:
+        candidate = c.get("candidate")
+        sdpMid = c.get("sdpMid")
+        sdpMLineIndex = c.get("sdpMLineIndex")
+        if candidate:
+            await pc.addIceCandidate(RTCIceCandidate(candidate, sdpMid, sdpMLineIndex))
 
-    await sio.emit('offer', offer.to_json(), to=sio.sid, namespace=namespace)
-    print(f"Sent Answer to client!: {offer.to_json()}")
-    
+    # Create answer
+    answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
 
-@sio.on('answer', namespace=namespace)
-async def handle_answer(answer):
-    pc = None
-    for room in pcs:
-       for pc_connection in pcs[room]:
-           if pc_connection.connection_id == request.sid:
-                pc = pc_connection
-                break
-    if pc is None:
-        print("no peer connection")
+    return {
+        "sdp": pc.localDescription.sdp,
+        "type": pc.localDescription.type,
+    }
+
+async def add_ice_candidate(candidate, sdpMid, sdpMLineIndex):
+    global active_pc
+    if active_pc is None:
+        logger.error("No active peer connection to add ICE candidate to.")
         return
-
-    await pc.setRemoteDescription(RTCSessionDescription(sdp=answer['sdp'], type=answer['type']))
-
-
-@sio.on('ice-candidate', namespace=namespace)
-async def handle_ice_candidate(candidate):
-   pc = None
-   for room in pcs:
-       for pc_connection in pcs[room]:
-           if pc_connection.connection_id == request.sid:
-                pc = pc_connection
-                break
-   if pc is None:
-        print("no peer connection")
-        return
-   try:
-      await pc.addIceCandidate(RTCIceCandidate(candidate))
-      print(f'Got ICE: {candidate}')
-   except Exception as e:
-      print(f'Error adding ICE candidate: {e}')
-
-
-
-async def start_agent():
-    await sio.connect('http://localhost:5000', namespaces=[namespace])
-    await sio.wait()
-
+    await active_pc.addIceCandidate(RTCIceCandidate(candidate, sdpMid, sdpMLineIndex))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Run an agent with a specific type.")
     parser.add_argument('--agent_type', type=str, required=True, help='The type of agent to run.')
     args = parser.parse_args()
-    
+
     if args.agent_type not in agent_personalities:
-       print(f"Invalid agent type: {args.agent_type}")
-       exit(1)
-    
-    asyncio.run(start_agent())
+        logger.error(f"Invalid agent type: {args.agent_type}")
+        exit(1)
+
+    agent_type = args.agent_type
+    logger.info(f"Agent {agent_type} loaded and ready.")
+    # Keep running
+    asyncio.get_event_loop().run_forever()
