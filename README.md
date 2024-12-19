@@ -78,7 +78,7 @@ The following security agents are included:
 2.  **Configure Zoom Live Streaming:**
      - In Zoom, navigate to *Settings* > *In Meeting (Advanced)* > Enable *Allow live streaming the meetings*.
      - In your Zoom meeting, click *More* > *Live on Custom Live Streaming Service*.
-     - Set the *Stream URL* to `rtmp://localhost:1935/live/stream` (or whatever rtmp endpoint you have set up.)
+     - Set the *Stream URL* to `rtmp://<url_to_app>:1935/live/stream` (or whatever rtmp endpoint you have set up.)
      - Set the *Stream Key* to `secret!` (or any stream key, but you do not need one if you are only running locally).
 
 ### Usage
@@ -109,8 +109,6 @@ This project is licensed under Apache 2.0  - see the [LICENSE](LICENSE) file for
 
 ## Acknowledgments
 
-*   This project was inspired by real-world security challenges, expressed by Eric M. https://www.linkedin.com/in/59852820r9f/
-
-Code is meant for demonstration purposes only. Not for production use.
-
-Use code with caution.
+* This project was inspired by [SOC stories](https://www.linkedin.com/in/59852820r9f/)
+* Kudos to [KnugiHK/rtmplite3](https://github.com/KnugiHK/rtmplite3) for a python rtmp server
+* This is meant for demonstration purposes only. Not for production use. Use with caution.

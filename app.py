@@ -31,12 +31,15 @@ def timestamp_filename(prefix, extension):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"{prefix}_{timestamp}.{extension}"
 
-def handle_rtmp_stream(stream):
+def handle_rtmp_stream(client,stream):
     print("RTMP stream started")
     try:
-        for data in stream:
-            # Process RTMP data as needed.
-            pass
+        print(client)
+        print(stream[0])
+        # for data in stream:
+        #     # Process RTMP data as needed.
+        #     print(data)
+        #     # pass
     except Exception as e:
         print(f"Error receiving RTMP Data: {e}")
     print("RTMP stream ended")
@@ -47,8 +50,8 @@ def start_rtmp_server():
     agent.start("0.0.0.0", RTMP_PORT)
 
     @Event.onPublish
-    def on_publish_handler(client, stream):
-        handle_rtmp_stream(stream)
+    def on_publish_handler(client,stream):
+        handle_rtmp_stream(client,stream)
 
     print(f"RTMP server started on port {RTMP_PORT}")
 
@@ -61,41 +64,41 @@ def start_rtmp_server():
     multitask.run()
     agent.stop()
 
-@app.route('/')
-def index():
-    # Ensure you have a templates/index.html
-    return render_template('index.html')
+# @app.route('/')
+# def index():
+#     # Ensure you have a templates/index.html
+#     return render_template('index.html')
 
-@socketio.on('connect')
-def connect():
-    print('Client connected')
+# @socketio.on('connect')
+# def connect():
+#     print('Client connected')
 
-@socketio.on('disconnect')
-def disconnect():
-    print('Client disconnected')
-    for room in list(pcs):
-        if request.sid in pcs[room]:
-            pcs[room].remove(request.sid)
-    if request.sid in sid_to_pc:
-        sid_to_pc.pop(request.sid, None)
-    print(f"Clients: {pcs}")
+# @socketio.on('disconnect')
+# def disconnect():
+#     print('Client disconnected')
+#     for room in list(pcs):
+#         if request.sid in pcs[room]:
+#             pcs[room].remove(request.sid)
+#     if request.sid in sid_to_pc:
+#         sid_to_pc.pop(request.sid, None)
+#     print(f"Clients: {pcs}")
 
-@socketio.on('offer')
-def handle_offer(offer):
-    room = "main"
-    pcs[room].append(request.sid)
+# @socketio.on('offer')
+# def handle_offer(offer):
+#     room = "main"
+#     pcs[room].append(request.sid)
 
-    # Send a dummy answer since we're not integrating real WebRTC here.
-    fake_answer = {
-        "type": "answer",
-        "sdp": "v=0\r\n..."
-    }
-    socketio.emit("answer", fake_answer, to=request.sid)
-    print("Sent dummy answer")
+#     # Send a dummy answer since we're not integrating real WebRTC here.
+#     fake_answer = {
+#         "type": "answer",
+#         "sdp": "v=0\r\n..."
+#     }
+#     socketio.emit("answer", fake_answer, to=request.sid)
+#     print("Sent dummy answer")
 
-@socketio.on('ice-candidate')
-def handle_ice_candidate(candidate):
-    print(f"Received ICE candidate: {candidate}")
+# @socketio.on('ice-candidate')
+# def handle_ice_candidate(candidate):
+#     print(f"Received ICE candidate: {candidate}")
 
 if __name__ == '__main__':
     # Start RTMP server in background green thread

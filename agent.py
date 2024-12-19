@@ -49,58 +49,6 @@ image_to_text = pipeline("image-to-text",model="Salesforce/blip-image-captioning
 genai.configure(api_key=gemini_api_key)
 gemini_model = genai.GenerativeModel('gemini-pro-vision')
 
-# Install: pip install aiortc, ffmpeg-python, transformers, accelerate, torch, opencv-python, google-generativeai
-import asyncio
-import json
-from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate, MediaStreamTrack
-from aiortc.contrib.media import MediaStreamTrack
-import socketio
-import logging
-import os
-import ffmpeg
-from PIL import Image
-from io import BytesIO
-from transformers import pipeline
-import torch
-from collections import defaultdict
-import cv2
-import google.generativeai as genai
-import argparse
-
-
-# Set the API key as an environment variable
-gemini_api_key = os.environ.get("GOOGLE_API_KEY")
-if not gemini_api_key:
-    raise ValueError("GOOGLE_API_KEY environment variable not set")
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("agent")
-
-# Set the namespace
-namespace = "/agent"
-
-# Setup our connection
-sio = socketio.AsyncClient(logger=True, engineio_logger=True)
-
-# Keep track of the connections
-pcs = defaultdict(list)
-
-async def broadcast(room, event, data):
-    for sid in pcs[room]:
-        await sio.emit(event, data, to=sid)
-
-
-#Setup the image captioning models:
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Using device {device}")
-image_to_text = pipeline("image-to-text",model="Salesforce/blip-image-captioning-base", device=device)
-
-
-# Initialize the Gemini model
-genai.configure(api_key=gemini_api_key)
-gemini_model = genai.GenerativeModel('gemini-pro-vision')
-
 # Model setup for the LLM.
 async def get_response_from_gemini(prompt, image_bytes):
     try:
