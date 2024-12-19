@@ -130,14 +130,19 @@ class ClientState:
         self.inAckSize = 0
         self.inLastAck = 0
 
+def empty_callback(payload):
+    pass
+
 # RTMP server class
 class RTMPServer:
-    def __init__(self, host='0.0.0.0', port=1935):
+    def __init__(self, host='0.0.0.0', port=1935, video=empty_callback, audio=empty_callback):
         # Socket
         # Server socket properties
         self.host = host
         self.port = port
         self.client_states = {}
+        self.video_callback = video
+        self.audio_callback = audio
         
         self.logger = logging.getLogger('RTMPServer')
         self.logger.setLevel(LogLevel)
@@ -407,34 +412,24 @@ class RTMPServer:
     
         if msg_type_id == RTMP_TYPE_SET_CHUNK_SIZE:
             self.handle_chunk_size_message(client_id, payload)
-        elif msg_type_id == RTMP_TYPE_ACKNOWLEDGEMENT:
-            await self.handle_bytes_read_report(client_id, payload)
-        # elif msg_type_id == RTMP_PACKET_TYPE_CONTROL:
-        #     self.handle_control_message(payload)
-        elif msg_type_id == RTMP_TYPE_WINDOW_ACKNOWLEDGEMENT_SIZE:
-            self.handle_window_acknowledgement_size(client_id, payload)
-        elif msg_type_id == RTMP_TYPE_SET_PEER_BANDWIDTH:
-            self.handle_set_peer_bandwidth(client_id, payload)
         elif msg_type_id == RTMP_TYPE_AUDIO:
             await self.handle_audio_data(client_id, rtmp_packet)
         elif msg_type_id == RTMP_TYPE_VIDEO:
             await self.handle_video_data(client_id, rtmp_packet)
-        # elif msg_type_id == RTMP_TYPE_FLEX_STREAM:
-        #     self.handle_flex_stream_message(payload)
-        # elif msg_type_id == RTMP_TYPE_FLEX_OBJECT:
-        #     self.handle_flex_shared_object_message(payload)
+        elif msg_type_id == RTMP_TYPE_ACKNOWLEDGEMENT:
+            await self.handle_bytes_read_report(client_id, payload)
+        elif msg_type_id == RTMP_TYPE_WINDOW_ACKNOWLEDGEMENT_SIZE:
+            self.handle_window_acknowledgement_size(client_id, payload)
+        elif msg_type_id == RTMP_TYPE_SET_PEER_BANDWIDTH:
+            self.handle_set_peer_bandwidth(client_id, payload)
         elif msg_type_id == RTMP_TYPE_FLEX_MESSAGE:
             invoke_message = self.parse_amf0_invoke_message(rtmp_packet)
             await self.handle_invoke_message(client_id, invoke_message)
         elif msg_type_id == RTMP_TYPE_DATA:
             await self.handle_amf_data(client_id, rtmp_packet)
-        # elif msg_type_id == RTMP_TYPE_SHARED_OBJECT:
-        #     self.handle_amf0_shared_object_message(payload)
         elif msg_type_id == RTMP_TYPE_INVOKE:
             invoke_message = self.parse_amf0_invoke_message(rtmp_packet)
             await self.handle_invoke_message(client_id, invoke_message)
-        # elif msg_type_id == RTMP_TYPE_METADATA:
-        #     self.handle_metadata_message(payload)
         else:
             self.logger.debug("Unsupported RTMP packet type: %s", msg_type_id)
 
@@ -498,6 +493,8 @@ class RTMPServer:
             client_state.videoCodecName = common.VIDEO_CODEC_NAME[codec_id]
             self.logger.info("Codec Name: %s", client_state.videoCodecName)
 
+        # print("VIDEO payload: ")#,payload)
+        self.video_callback(payload)
         
     async def handle_audio_data(self, client_id, rtmp_packet):
         client_state = self.client_states[client_id]
@@ -540,8 +537,8 @@ class RTMPServer:
                 client_state.audioSampleRate = 48000
                 client_state.audioChannels = payload[11]
         
-        #write for players
-
+        # print("VIDEO payload: ")#,payload)
+        self.audio_callback(payload)
 
     def handle_chunk_size_message(self, client_id, payload):
         # Handle Chunk Size message
@@ -878,7 +875,7 @@ class RTMPServer:
         async with server:
             await server.serve_forever()
 
-# Configure logging level and format
-logging.basicConfig(level=LogLevel, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-rtmp_server = RTMPServer()
-asyncio.run(rtmp_server.start_server())
+# # Configure logging level and format
+# logging.basicConfig(level=LogLevel, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# rtmp_server = RTMPServer()
+# asyncio.run(rtmp_server.start_server())
